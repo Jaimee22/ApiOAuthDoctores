@@ -1,7 +1,9 @@
 using ApiOAuthPractica.Data;
 using ApiOAuthPractica.Helpers;
 using ApiOAuthPractica.Repositories;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Azure;
 using NSwag;
 using NSwag.Generation.Processors.Security;
 
@@ -17,9 +19,24 @@ builder.Services.AddAuthentication(helper.GetAuthenticateSchema()).AddJwtBearer(
 
 
 
-string connectionString = builder.Configuration.GetConnectionString("SqlAzure");
-builder.Services.AddTransient<RepositoryDoctores>();
+
+builder.Services.AddAzureClients(factory =>
+{
+    factory.AddSecretClient
+    (builder.Configuration.GetSection("KeyVault"));
+});
+SecretClient secretClient =
+builder.Services.BuildServiceProvider().GetService<SecretClient>();
+KeyVaultSecret secret =
+    await secretClient.GetSecretAsync("SqlAzure");
+string connectionString = secret.Value;
+
+
+
+
+//string connectionString = builder.Configuration.GetConnectionString("SqlAzure");
 builder.Services.AddDbContext<DoctoresContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddTransient<RepositoryDoctores>();
 
 
 
